@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}
+  home
+{% endblock title %}
+
+{% block content %}
+  <h1>imroz khan</h1>
+
+  <img id="img" src="{{url_for('static', filename='images/download.png')}}" alt="">
+{% endblock content %}
+
+
+{% block script %}
+      <script src="{{url_for('static', filename='scripts/script.js')}}"></script>
+{% endblock script %}

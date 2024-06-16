@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}view{% endblock title %}
+
+{% block content %}
+  {% for val in values %}
+    <h1>ID : {{val.id}}</h1>
+    <h1>email : {{val.email}}</h1>
+    <h1>name : {{val.name}}</h1>
+    <br>
+  {% endfor %}
+{% endblock content %}
