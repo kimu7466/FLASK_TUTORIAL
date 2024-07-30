@@ -1,0 +1,95 @@
+To complete Step 8, you need to initialize the database so that it can store your To-Do tasks. Here's a detailed guide on how to do this:
+
+### Step 8: Initializing the Database
+
+1. **Ensure the database model is defined** in `models.py` as shown previously.
+
+2. **Initialize the database in your `app.py` file**. Ensure `db.init_app(app)` is called after the Flask app configuration.
+
+3. **Create a script to create the database**. You can create a separate script (e.g., `init_db.py`) or use a Flask shell.
+
+#### Option A: Using a Separate Script (init_db.py)
+Create a new Python script named `init_db.py` in your project directory:
+
+```python
+from app import app
+from models import db
+
+with app.app_context():
+    db.create_all()
+    print("Database tables created")
+```
+
+Run this script to create the database tables:
+
+```bash
+python init_db.py
+```
+
+#### Option B: Using Flask Shell
+1. Make sure your `app.py` file looks similar to this:
+
+```python
+from flask import Flask, render_template, redirect, url_for, request
+from models import db, Task
+from forms import TaskForm
+
+app = Flask(__name__)
+app.config.from_object('config.Config')
+
+db.init_app(app)
+
+@app.route('/')
+def index():
+    tasks = Task.query.all()
+    return render_template('index.html', tasks=tasks)
+
+@app.route('/add', methods=['GET', 'POST'])
+def add_task():
+    form = TaskForm()
+    if form.validate_on_submit():
+        task = Task(title=form.title.data, description=form.description.data)
+        db.session.add(task)
+        db.session.commit()
+        return redirect(url_for('index'))
+    return render_template('add_task.html', form=form)
+
+@app.route('/delete/<int:task_id>')
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/complete/<int:task_id>')
+def complete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    task.done = True
+    db.session.commit()
+    return redirect(url_for('index'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+2. Set the Flask application environment variable to point to your application:
+```bash
+export FLASK_APP=app.py
+export FLASK_ENV=development  # Optional: enables debug mode
+```
+
+3. Open a Flask shell:
+```bash
+flask shell
+```
+
+4. Inside the Flask shell, create the database and tables:
+```python
+from app import db
+db.create_all()
+exit()
+```
+
+After running either of the above options, you should see a new file named `tasks.db` in your project directory. This file is your SQLite database where the tasks will be stored.
+
+Now you can run your Flask application, and it will be able to store and manage To-Do tasks in the database.

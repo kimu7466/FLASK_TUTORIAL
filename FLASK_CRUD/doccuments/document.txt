@@ -1,0 +1,237 @@
+Creating a complete To-Do list project in Flask involves several steps, including setting up the project structure, creating routes, handling database operations, and implementing the front-end interface. Below is a step-by-step guide to building a simple To-Do list application using Flask.
+
+### Project Structure
+Here's the recommended structure for your Flask project:
+
+```
+todo_app/
+├── app.py
+├── models.py
+├── forms.py
+├── templates/
+│   ├── base.html
+│   ├── index.html
+│   └── add_task.html
+├── static/
+│   └── style.css
+├── requirements.txt
+└── config.py
+```
+
+### Step 1: Setting Up the Environment
+1. **Create a virtual environment** and activate it:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+2. **Install Flask** and other necessary packages:
+   ```bash
+   pip install Flask Flask-SQLAlchemy Flask-WTF
+   ```
+
+3. **Create a `requirements.txt` file** to manage dependencies:
+   ```bash
+   pip freeze > requirements.txt
+   ```
+
+### Step 2: Configuring the Application
+Create a `config.py` file to store configuration settings:
+```python
+import os
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///tasks.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+```
+
+### Step 3: Setting Up the Database
+Create a `models.py` file for the database models:
+```python
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config.from_object('config.Config')
+db = SQLAlchemy(app)
+
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(200), nullable=True)
+    done = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f'<Task {self.title}>'
+```
+
+### Step 4: Creating Forms
+Create a `forms.py` file for handling forms:
+```python
+from flask_wtf import FlaskForm
+from wtforms import StringField, TextAreaField, BooleanField, SubmitField
+from wtforms.validators import DataRequired
+
+class TaskForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired()])
+    description = TextAreaField('Description')
+    done = BooleanField('Done')
+    submit = SubmitField('Submit')
+```
+
+### Step 5: Creating Routes and Views
+Create an `app.py` file to define routes and views:
+```python
+from flask import Flask, render_template, redirect, url_for, request
+from models import db, Task
+from forms import TaskForm
+
+app = Flask(__name__)
+app.config.from_object('config.Config')
+
+db.init_app(app)
+
+@app.route('/')
+def index():
+    tasks = Task.query.all()
+    return render_template('index.html', tasks=tasks)
+
+@app.route('/add', methods=['GET', 'POST'])
+def add_task():
+    form = TaskForm()
+    if form.validate_on_submit():
+        task = Task(title=form.title.data, description=form.description.data)
+        db.session.add(task)
+        db.session.commit()
+        return redirect(url_for('index'))
+    return render_template('add_task.html', form=form)
+
+@app.route('/delete/<int:task_id>')
+def delete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    db.session.delete(task)
+    db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/complete/<int:task_id>')
+def complete_task(task_id):
+    task = Task.query.get_or_404(task_id)
+    task.done = True
+    db.session.commit()
+    return redirect(url_for('index'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+### Step 6: Creating Templates
+Create the following templates in the `templates/` directory.
+
+#### `base.html`
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>To-Do App</title>
+</head>
+<body>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
+```
+
+#### `index.html`
+```html
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>To-Do List</h1>
+<ul>
+    {% for task in tasks %}
+    <li>
+        {{ task.title }} - {{ task.description }}
+        <a href="{{ url_for('complete_task', task_id=task.id) }}">Complete</a>
+        <a href="{{ url_for('delete_task', task_id=task.id) }}">Delete</a>
+    </li>
+    {% endfor %}
+</ul>
+<a href="{{ url_for('add_task') }}">Add New Task</a>
+{% endblock %}
+```
+
+#### `add_task.html`
+```html
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Add a New Task</h1>
+<form method="POST" action="{{ url_for('add_task') }}">
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.title.label }}<br>
+        {{ form.title(size=32) }}
+    </p>
+    <p>
+        {{ form.description.label }}<br>
+        {{ form.description(rows=4, cols=32) }}
+    </p>
+    <p>{{ form.done() }} {{ form.done.label }}</p>
+    <p>{{ form.submit() }}</p>
+</form>
+{% endblock %}
+```
+
+### Step 7: Adding Styles
+Create a `style.css` file in the `static/` directory to add some basic styles:
+```css
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+a {
+    margin-right: 10px;
+}
+```
+
+### Step 8: Initializing the Database
+Run the following commands in the Python shell to create the database and tables:
+```python
+from app import db
+db.create_all()
+```
+
+### Running the Application
+Finally, run the application with:
+```bash
+flask run
+```
+
+Your Flask To-Do list application should now be up and running! You can add, complete, and delete tasks through the web interface.
